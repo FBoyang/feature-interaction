@@ -28,13 +28,13 @@ class MMatrix:
         
     def generateMatrix(self):
         #generate matrix
-        """
+        
         self.originalMatrix = np.random.randint(
             self.maxGenotype, size=(self.N,self.M))
         """
         self.originalMatrix = np.random.multinomial(self.maxGenotype-1, 
             [1/self.N]*self.N, size =(self.N*self.M))
-        
+        """
         
     def simulatePhenotypeInfinitesimally(self):
         print("Infinitesimal phenotype------------------------------------------")
