@@ -1,14 +1,14 @@
 import numpy as np
 
 def create_genotype_matrix():
-    snps = np.random.randint(10, 101)
-    genes = np.random.randint(1000, 5001)
+    SNP_features = np.random.randint(10, 101)
+    samples = np.random.randint(1000, 5001)
 
-    genotype_matrix = np.empty((snps, genes))
+    genotype_matrix = np.empty((SNP_features, samples))
 
     for i, row in enumerate(genotype_matrix):
+        p = np.random.random()
         for j, col in enumerate(row):
-            p = np.random.random()
             genotype_matrix[i][j] = np.random.binomial(2, p)
 
     return genotype_matrix

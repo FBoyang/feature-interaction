@@ -1,5 +1,4 @@
 import numpy as np
-import random as rd
 import pandas as pd
 import shap
 import sklearn as sk
@@ -8,10 +7,10 @@ import matplotlib.pyplot as plt
 
 
 class MMatrix:
-    def __init__(self, seed):
-        self.seed = seed
-        self.N = 1000 #np.random.randint(1000, 5001)
-        self.M = 10 #np.random.randint(10, 101)
+    def __init__(self):
+        np.random.seed(1)
+        self.N = np.random.randint(1000, 5001)
+        self.M = np.random.randint(10, 101)
 
         self.infPhenotypeContributionRateArray = np.array([])
         self.unInfPhenotypeContributionRateArray = np.array([])
@@ -20,15 +19,14 @@ class MMatrix:
         self.genotype_matrix = np.empty((self.N, self.M))
 
         for i, row in enumerate(self.genotype_matrix):
+            p = np.random.random()
             for j, col in enumerate(row):
-                p = np.random.random()
                 self.genotype_matrix[i][j] = np.random.binomial(2, p)
-
 
     def simulatePhenotypeInfinitesimally(self):
         for i in range(self.M):
             self.infPhenotypeContributionRateArray = np.append(
-                self.infPhenotypeContributionRateArray ,rd.uniform(-1, 1))
+                self.infPhenotypeContributionRateArray ,np.random.uniform(-1, 1))
 
         transposedMatrix = self.infPhenotypeContributionRateArray.transpose()
 
@@ -38,7 +36,7 @@ class MMatrix:
         for i in range(self.M):
             if sp.isprime(i):
                 self.unInfPhenotypeContributionRateArray = np.append(
-                    self.unInfPhenotypeContributionRateArray,rd.uniform(-1, 1))
+                    self.unInfPhenotypeContributionRateArray,np.random.uniform(-1, 1))
             else:
                 self.unInfPhenotypeContributionRateArray = np.append(
                     self.unInfPhenotypeContributionRateArray,0.0)
@@ -79,20 +77,16 @@ class MMatrix:
         #fig.show()
 
         #3. SHAP plot waterfall
-        shap.plots.waterfall(shap_values[sample_ind], max_display=14)
+        shap.plots.waterfall(shap_values[sample_ind], max_display=14) #add show=false for plt.savefig to work
 
         #plt.show(p)
-        plt.savefig("outputs/" + modelType + "_seed_" + str(seed) + ".png")
+        plt.savefig("outputs/" + modelType + ".png")
 
 
 if __name__ == "__main__":
-    rd.seed()
-    seed = np.random.randint(1, 1000)
-    myMatrix = MMatrix(seed)
+    myMatrix = MMatrix()
     myMatrix.generateMatrix()
     myMatrix.simulatePhenotypeInfinitesimally()
     myMatrix.simulatePhenotypeFinitesimally()
-    myMatrix.generateModel(myMatrix.genotype_matrix,
-                           myMatrix.simulateInfPhenotype, "infinitesimally")
-    myMatrix.generateModel(myMatrix.genotype_matrix,
-                           myMatrix.simulateUnInfPhenotype, "finitesimally")
+    myMatrix.generateModel(myMatrix.genotype_matrix,myMatrix.simulateInfPhenotype, "infinitesimally")
+    myMatrix.generateModel(myMatrix.genotype_matrix,myMatrix.simulateUnInfPhenotype, "finitesimally")
