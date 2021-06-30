@@ -22,7 +22,6 @@ numSamples = nrow(pairSamples) # how many datapoints do we have?
 # format the data
 trueSamples = pairSamples$trueValue
 SHAPSample = pairSamples$shapValue
-
 ```
 
 # Significance
