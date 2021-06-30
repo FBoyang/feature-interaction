@@ -23,18 +23,18 @@ class MMatrix:
     def __init__(self):
         #sample size (N) and genome length (M)
         self.N = rd.randint(1000, 5000)    #row
-        self.M = rd.randint(10,100)        #column
+        self.M = 90        #column
         self.maxGenotype = 3               #{0,1,2}
         
     def generateMatrix(self):
         #generate matrix
-        
+        """
         self.originalMatrix = np.random.randint(
             self.maxGenotype, size=(self.N,self.M))
         """
         self.originalMatrix = np.random.multinomial(self.maxGenotype-1, 
             [1/self.N]*self.N, size =(self.N*self.M))
-        """
+        
         
     def simulatePhenotypeInfinitesimally(self):
         print("Infinitesimal phenotype------------------------------------------")
@@ -43,7 +43,7 @@ class MMatrix:
                 self.infPhenotypeContributionRateArray ,rd.uniform(-1, 1))
 
         transposedMatrix = self.infPhenotypeContributionRateArray.transpose()
-        
+        print(transposeMatrix)
         for i in range(self.N):
             self.simulateInfPhenotype = np.dot(
                 self.originalMatrix,transposedMatrix)

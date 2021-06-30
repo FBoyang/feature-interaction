@@ -6,8 +6,10 @@ import sklearn as sk
 import sympy as sp
 import matplotlib.pyplot as plt
 
+
 class MMatrix:
-    def __init__(self):
+    def __init__(self, seed):
+        self.seed = seed
         self.N = 1000 #np.random.randint(1000, 5001)
         self.M = 10 #np.random.randint(10, 101)
 
@@ -80,11 +82,13 @@ class MMatrix:
         shap.plots.waterfall(shap_values[sample_ind], max_display=14)
 
         #plt.show(p)
-        plt.savefig("X100@18" + modelType + ".png")
+        plt.savefig("outputs/" + modelType + "_seed_" + str(seed) + ".png")
 
 
 if __name__ == "__main__":
-    myMatrix = MMatrix()
+    rd.seed()
+    seed = np.random.randint(1, 1000)
+    myMatrix = MMatrix(seed)
     myMatrix.generateMatrix()
     myMatrix.simulatePhenotypeInfinitesimally()
     myMatrix.simulatePhenotypeFinitesimally()
