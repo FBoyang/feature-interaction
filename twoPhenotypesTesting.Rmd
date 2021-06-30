@@ -1,0 +1,108 @@
+---
+title: "twoSamplePaired"
+credit: "Don Vaughn"
+author: "Trong (credit@ Dr. Don Vaughn)"
+date: "June 29, 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+numResamples = 10000
+```
+
+```{r load, echo=FALSE}
+
+# load the data
+pairSamples = read.csv("C:/Users/JX/Documents/R/IntroToModernStats/trueShapPairSamples.csv")   # PC
+
+numSamples = nrow(pairSamples) # how many datapoints do we have?
+
+# format the data
+trueSamples = pairSamples$trueValue
+SHAPSample = pairSamples$shapValue
+
+```
+
+# Significance
+## Paired null hypothesis permutation test
+``` {r paired significance bootstrap}
+sampleForPerms = pairSamples[,c("trueValue","shapValue")]
+
+# what did original data show?
+origEffectSize = mean( sampleForPerms$trueValue / sampleForPerms$shapValue )
+
+indices = 1:nrow(pairSamples) # list all rows
+testStatisticDistribution = rep(NA,numResamples)
+for (i in 1 : numResamples) {
+  
+  # simulate chance: for each row, randomly swap samples
+  shouldFlipRows = runif( nrow(sampleForPerms) ) > .5
+  rowsToFlip = which (shouldFlipRows)
+  sampleForPerms[rowsToFlip,1:2] = sampleForPerms[rowsToFlip,2:1]
+  
+  # calculate statistic
+  testStatisticDistribution[i] = mean(sampleForPerms$trueValue / sampleForPerms$shapValue)
+}
+
+# calculate p-value
+pval <- (sum(testStatisticDistribution >= origEffectSize) + 
+           sum(testStatisticDistribution <= -origEffectSize) ) / (numResamples)
+sprintf("null distribution; observed effect %g, pval of observed effect %g", origEffectSize, pval)
+
+```
+
+## paired null hist
+``` {r paired null hist, echo=FALSE}
+par(mfrow=c(1,1))
+
+# bounds
+sortedTestStatisticDistribution <- sort(testStatisticDistribution)
+testStatisticLeftBound <- sortedTestStatisticDistribution[.025*numResamples]
+testStatisticRightBound <- sortedTestStatisticDistribution[.975*numResamples]
+
+sprintf("null distribution CI: (%g, %g); observed effect %g, pval of observed effect %g", testStatisticLeftBound, testStatisticRightBound, origEffectSize, pval)
+
+# plot results
+par(mfrow=c(1,1))
+hist(testStatisticDistribution, 100, xlab = "Test Statistic", main = "Histogram of Null Distribution", xlim = c(-10,10))
+abline(v=origEffectSize, col="green")
+abline(v=testStatisticLeftBound, col="red")
+abline(v=testStatisticRightBound, col="red")
+```
+
+
+
+# Magnitude
+``` {r null mag bootstrap}
+
+indices = 1:numSamples
+testStatisticDistribution = rep(NA,numResamples)
+for (i in 1 : numResamples) {
+  #resample
+  bootDataInds = sample (indices, length(indices), replace = T)
+  bootData = pairSamples[bootDataInds,]
+
+  # calculate statistic
+  testStatisticDistribution[i] = mean(bootData$trueValue) / mean(bootData$shapValue) # calc fractional sample' difference
+}
+
+## confidence intervals
+sorted_mean <- sort(testStatisticDistribution)
+testStatisticLeftBound <- sorted_mean[.025*numResamples]
+testStatisticRightBound <- sorted_mean[.975*numResamples]
+```
+
+## plots
+``` {r paired hist, echo=FALSE}
+par(mfrow=c(1,1))
+
+sprintf("effect size %g (%g, %g)", origEffectSize, testStatisticLeftBound, testStatisticRightBound)
+
+hist(testStatisticDistribution, 40, main = "Histogram of Bootstraps", xlab = "Test Statistic") #xlim=c(-2,4)
+abline(v=origEffectSize, col="blue")
+abline(v=testStatisticLeftBound, col="red")
+abline(v=testStatisticRightBound, col="red")
+
+```
