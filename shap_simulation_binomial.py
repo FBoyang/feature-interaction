@@ -1,42 +1,65 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Jun 27 10:52:07 2021
+
+@author: JX
+"""
+
 import numpy as np
+import random as rd
 import pandas as pd
 import shap
 import sklearn as sk
 import sympy as sp
 import matplotlib.pyplot as plt
-
+#import csv
 
 class MMatrix:
     def __init__(self):
-        np.random.seed(1)
-        self.N = np.random.randint(1000, 5001)
-        self.M = np.random.randint(10, 101)
+        #np.random.seed(1)
+        self.N = 100#np.random.randint(1000, 5001)
+        self.M = 50#np.random.randint(10, 101)
 
         self.infPhenotypeContributionRateArray = np.array([])
         self.unInfPhenotypeContributionRateArray = np.array([])
-
+        
+        self.shapCoefficience=np.empty(self.M) # predicted shap coeficiences
+        self.maxDisplayInSHAP = 10 #wanna see maximum 10 features of SHAP
+        self.sampleIndex = 1 #test SHAP correctioness at specific sample index
+        self.maxSampleSize = 10 #to assign maximum sample size in shap.masker()
+    
+    def mNormalize(self, matrix):
+        #return sk.preprocessing.normalize(matrix, axis=1, norm='l1')
+        return matrix
+        
     def generateMatrix(self):
         self.genotype_matrix = np.empty((self.N, self.M))
 
         for i, row in enumerate(self.genotype_matrix):
-            p = np.random.random()
+            np.random.seed(1)
+            p = rd.uniform(0,1)
             for j, col in enumerate(row):
                 self.genotype_matrix[i][j] = np.random.binomial(2, p)
-
+                
+            #normalized SNPs
+            self.genotype_matrix = self.mNormalize(self.genotype_matrix)
+        
     def simulatePhenotypeInfinitesimally(self):
+        np.random.seed(1)
         for i in range(self.M):
+            beta = rd.uniform(0,1)
             self.infPhenotypeContributionRateArray = np.append(
-                self.infPhenotypeContributionRateArray ,np.random.uniform(-1, 1))
+                self.infPhenotypeContributionRateArray ,beta)
 
-        transposedMatrix = self.infPhenotypeContributionRateArray.transpose()
-
+        transposedMatrix = self.infPhenotypeContributionRateArray#.transpose()
+        
         self.simulateInfPhenotype = np.dot(self.genotype_matrix,transposedMatrix)
-
+        
     def simulatePhenotypeFinitesimally(self):
         for i in range(self.M):
             if sp.isprime(i):
                 self.unInfPhenotypeContributionRateArray = np.append(
-                    self.unInfPhenotypeContributionRateArray,np.random.uniform(-1, 1))
+                    self.unInfPhenotypeContributionRateArray,rd.uniform(-1, 1))
             else:
                 self.unInfPhenotypeContributionRateArray = np.append(
                     self.unInfPhenotypeContributionRateArray,0.0)
@@ -47,46 +70,49 @@ class MMatrix:
 
     def generateModel(self, genotype, phenotype, modelType):
         X = pd.DataFrame(genotype)
-
         X.columns = ["G" + str(i) for i in range(self.M)]
         y = phenotype
 
         model = sk.linear_model.LinearRegression()
         model.fit(X,y)
 
-        #print("List all coefficients")
-        #for i in range(X.shape[1]):
-        #    print("[",i,"]", "=", model.coef_[i].round(4))
-
-        #1. Partial dependence plotting
-        #X100 = shap.utils.sample(X, 100)
-        #p=shap.plots.partial_dependence("G0", model.predict, X100, ice=False,
-        #    model_expected_value=True, feature_expected_value=True, show=False)
-
+        #Get all the coef. to an array for later comparision with true coef.
+        for i in range(X.shape[1]):
+            self.shapCoefficience[i] = format(model.coef_[i])
+        
         #2.1. Compute SHAP values
-        background = shap.maskers.Independent(X, max_samples=100)
+        background = shap.maskers.Independent(X, max_samples=self.maxSampleSize)
         explainer = shap.Explainer(model.predict, background)
         shap_values = explainer(X)
+        
         #2.2. Make a standard partial dependence plot at a specific index
-        sample_ind = 18
-        #fig, ax = shap.plots.partial_depenedence_plot("G0", model.predict, X,
-        #        model_expected_value = True, feature_expected_value = True,
-        #        show=False,ice=False,shap_values=shap_values[sample_ind:
-        #        sample_ind+1,:],shap_value_features=X.iloc[sample_ind:
-        #        sample_ind+1,:] )
-        #fig.show()
-
+        sample_ind = self.sampleIndex
+        
         #3. SHAP plot waterfall
-        shap.plots.waterfall(shap_values[sample_ind], max_display=14) #add show=false for plt.savefig to work
+        shap.plots.waterfall(shap_values[sample_ind], 
+                             max_display=self.maxDisplayInSHAP)
 
-        #plt.show(p)
-        plt.savefig("outputs/" + modelType + ".png")
-
+    def exportPairDataToFile(self, data1, title1, data2, title2, fileName):
+        df = pd.DataFrame(data1)
+        df.columns = [title1]
+        
+        df[title2] = pd.DataFrame(data2)
+        print(df)
+        
+        df.to_csv(fileName)
 
 if __name__ == "__main__":
     myMatrix = MMatrix()
     myMatrix.generateMatrix()
     myMatrix.simulatePhenotypeInfinitesimally()
     myMatrix.simulatePhenotypeFinitesimally()
-    myMatrix.generateModel(myMatrix.genotype_matrix,myMatrix.simulateInfPhenotype, "infinitesimally")
-    myMatrix.generateModel(myMatrix.genotype_matrix,myMatrix.simulateUnInfPhenotype, "finitesimally")
+    myMatrix.generateModel(myMatrix.genotype_matrix,
+                           myMatrix.simulateInfPhenotype, "infinitesimally")
+    
+    myMatrix.exportPairDataToFile(myMatrix.infPhenotypeContributionRateArray,
+        'trueValue',myMatrix.shapCoefficience,'shapValue','./trueShapPairSamples.csv')
+    
+    """
+    myMatrix.generateModel(myMatrix.genotype_matrix,
+                           myMatrix.simulateUnInfPhenotype, "finitesimally")
+    """
