@@ -15,22 +15,24 @@ numResamples = 10000
 ```{r load, echo=FALSE}
 
 # load the data
-pairSamples = read.csv("C:/Users/JX/Documents/R/IntroToModernStats/trueShapPairSamples.csv")   # PC
+pairSamples = read.csv("C:/Users/JX/.spyder-py3/assignment1/trueShapPairSamples.csv")   # PC
 
 numSamples = nrow(pairSamples) # how many datapoints do we have?
 
 # format the data
 trueSamples = pairSamples$trueValue
 SHAPSample = pairSamples$shapValue
+
 ```
 
 # Significance
 ## Paired null hypothesis permutation test
 ``` {r paired significance bootstrap}
+
 sampleForPerms = pairSamples[,c("trueValue","shapValue")]
 
 # what did original data show?
-origEffectSize = mean( sampleForPerms$trueValue / sampleForPerms$shapValue )
+origEffectSize = mean( sampleForPerms$trueValue - sampleForPerms$shapValue )
 
 indices = 1:nrow(pairSamples) # list all rows
 testStatisticDistribution = rep(NA,numResamples)
@@ -42,12 +44,13 @@ for (i in 1 : numResamples) {
   sampleForPerms[rowsToFlip,1:2] = sampleForPerms[rowsToFlip,2:1]
   
   # calculate statistic
-  testStatisticDistribution[i] = mean(sampleForPerms$trueValue / sampleForPerms$shapValue)
+  testStatisticDistribution[i] = mean(sampleForPerms$trueValue - sampleForPerms$shapValue)
 }
 
 # calculate p-value
 pval <- (sum(testStatisticDistribution >= origEffectSize) + 
            sum(testStatisticDistribution <= -origEffectSize) ) / (numResamples)
+sprintf("original sample size %g, resampling %g times",numSamples , numResamples)
 sprintf("null distribution; observed effect %g, pval of observed effect %g", origEffectSize, pval)
 
 ```
@@ -65,7 +68,7 @@ sprintf("null distribution CI: (%g, %g); observed effect %g, pval of observed ef
 
 # plot results
 par(mfrow=c(1,1))
-hist(testStatisticDistribution, 100, xlab = "Test Statistic", main = "Histogram of Null Distribution", xlim = c(-10,10))
+hist(testStatisticDistribution, 100, xlab = "Test Statistic", main = "Histogram of Null Distribution", xlim = c(-0.8,0.8))
 abline(v=origEffectSize, col="green")
 abline(v=testStatisticLeftBound, col="red")
 abline(v=testStatisticRightBound, col="red")
@@ -84,7 +87,7 @@ for (i in 1 : numResamples) {
   bootData = pairSamples[bootDataInds,]
 
   # calculate statistic
-  testStatisticDistribution[i] = mean(bootData$trueValue) / mean(bootData$shapValue) # calc fractional sample' difference
+  testStatisticDistribution[i] = mean(bootData$trueValue) - mean(bootData$shapValue) # calc fractional sample' difference
 }
 
 ## confidence intervals
