@@ -12,38 +12,57 @@ class MMatrix:
         self.N = 1000 #np.random.randint(1000, 5001)
         self.M = 20 #np.random.randint(10, 101)
 
-        self.infPhenotypeContributionRateArray = np.array([])
-        self.unInfPhenotypeContributionRateArray = np.array([])
+        self.inf_beta_array = np.array([])
+        self.uninf_beta_array = np.array([])
+
+        self.inf_epsilon_array = np.array([])
+        self.uninf_epsilon_array = np.array([])
+
+        self.sigma_g_squared = np.random.uniform(0, 1)
+        self.sigma_e_squared = 1 - self.sigma_g_squared
 
     def generateMatrix(self):
         self.genotype_matrix = np.empty((self.N, self.M))
 
-        for i, row in enumerate(self.genotype_matrix):
-            p = np.random.random()
-            for j, col in enumerate(row):
-                self.genotype_matrix[i][j] = np.random.binomial(2, p)
+        for i in range(0, self.M):
+            p = np.random.random() #p is fixed column-wise
+            for j in range(0, self.N):
+                self.genotype_matrix[j][i] = np.random.binomial(2, p)
 
     def simulatePhenotypeInfinitesimally(self):
         for i in range(self.M):
-            self.infPhenotypeContributionRateArray = np.append(
-                self.infPhenotypeContributionRateArray,np.random.uniform(-1, 1))
+            self.inf_beta_array = np.append(self.inf_beta_array, np.random.uniform(0, self.sigma_g_squared/self.M))
 
-        transposed_matrix = self.infPhenotypeContributionRateArray.transpose()
+        transposed_matrix = self.inf_beta_array.transpose()
 
-        self.simulateInfPhenotype = np.dot(self.genotype_matrix,transposed_matrix)
+        #pre-noise simulated phenotype
+        self.simulate_inf_phenotype = np.dot(self.genotype_matrix, transposed_matrix)
+
+        #populate epsilon (noise) array)
+        for i in range(self.N):
+            self.inf_epsilon_array = np.append(self.inf_epsilon_array, np.random.uniform(0, self.sigma_e_squared))
+
+        #post-noise simualted phenotype
+        self.simulate_inf_phenotype_noised = np.add(self.simulate_inf_phenotype, self.inf_epsilon_array)
 
     def simulatePhenotypeFinitesimally(self):
         for i in range(self.M):
-            if sp.isprime(i):
-                self.unInfPhenotypeContributionRateArray = np.append(
-                    self.unInfPhenotypeContributionRateArray,np.random.uniform(-1, 1))
+            if sp.isprime(i): #the isprime condition can be changed to whatever SNPs you want to be included
+                self.uninf_beta_array = np.append(self.uninf_beta_array, np.random.uniform(0, self.sigma_g_squared/self.M))
             else:
-                self.unInfPhenotypeContributionRateArray = np.append(
-                    self.unInfPhenotypeContributionRateArray,0.0)
+                self.uninf_beta_array = np.append(self.uninf_beta_array, 0.0)
 
-        transposed_matrix = self.unInfPhenotypeContributionRateArray.transpose()
+        transposed_matrix = self.uninf_beta_array.transpose()
 
-        self.simulateUnInfPhenotype = np.dot(self.genotype_matrix,transposed_matrix)
+        #pre-noise simulated phenotype
+        self.simulate_uninf_phenotype = np.dot(self.genotype_matrix, transposed_matrix)
+
+        #populate epsilon (noise) array)
+        for i in range(self.N):
+            self.uninf_epsilon_array = np.append(self.uninf_epsilon_array, np.random.uniform(0, self.sigma_e_squared))
+
+        #post-noise simualted phenotype
+        self.simulate_uninf_phenotype_noised = np.add(self.simulate_uninf_phenotype, self.uninf_epsilon_array)
 
     def generateModel(self, genotype, phenotype, modelType):
         X = pd.DataFrame(genotype)
@@ -89,5 +108,5 @@ if __name__ == "__main__":
     myMatrix.generateMatrix()
     myMatrix.simulatePhenotypeInfinitesimally()
     myMatrix.simulatePhenotypeFinitesimally()
-    myMatrix.generateModel(myMatrix.genotype_matrix,myMatrix.simulateInfPhenotype, "infinitesimally")
-    #myMatrix.generateModel(myMatrix.genotype_matrix,myMatrix.simulateUnInfPhenotype, "finitesimally")
+    myMatrix.generateModel(myMatrix.genotype_matrix, myMatrix.simulate_inf_phenotype, "infinitesimally")
+    #myMatrix.generateModel(myMatrix.genotype_matrix, myMatrix.simulate_uninf_phenotype, "finitesimally")
