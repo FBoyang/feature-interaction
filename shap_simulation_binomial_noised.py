@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 class MMatrix:
     def __init__(self):
-        np.random.seed(1)
+        np.random.seed(123)
         self.N = 1000 #np.random.randint(1000, 5001)
         self.M = 20 #np.random.randint(10, 101)
 
@@ -25,13 +25,13 @@ class MMatrix:
         self.genotype_matrix = np.empty((self.N, self.M))
 
         for i in range(0, self.M):
-            p = np.random.random() #p is fixed column-wise
+            p = np.random.uniform(0, 1) #p is fixed column-wise
             for j in range(0, self.N):
                 self.genotype_matrix[j][i] = np.random.binomial(2, p)
 
     def simulatePhenotypeInfinitesimally(self):
         for i in range(self.M):
-            self.inf_beta_array = np.append(self.inf_beta_array, np.random.uniform(0, self.sigma_g_squared/self.M))
+            self.inf_beta_array = np.append(self.inf_beta_array, np.random.normal(0, self.sigma_g_squared/self.M))
 
         transposed_matrix = self.inf_beta_array.transpose()
 
@@ -40,7 +40,7 @@ class MMatrix:
 
         #populate epsilon (noise) array)
         for i in range(self.N):
-            self.inf_epsilon_array = np.append(self.inf_epsilon_array, np.random.uniform(0, self.sigma_e_squared))
+            self.inf_epsilon_array = np.append(self.inf_epsilon_array, np.random.normal(0, self.sigma_e_squared))
 
         #post-noise simualted phenotype
         self.simulate_inf_phenotype_noised = np.add(self.simulate_inf_phenotype, self.inf_epsilon_array)
@@ -48,7 +48,7 @@ class MMatrix:
     def simulatePhenotypeFinitesimally(self):
         for i in range(self.M):
             if sp.isprime(i): #the isprime condition can be changed to whatever SNPs you want to be included
-                self.uninf_beta_array = np.append(self.uninf_beta_array, np.random.uniform(0, self.sigma_g_squared/self.M))
+                self.uninf_beta_array = np.append(self.uninf_beta_array, np.random.normal(0, self.sigma_g_squared/self.M))
             else:
                 self.uninf_beta_array = np.append(self.uninf_beta_array, 0.0)
 
@@ -59,7 +59,7 @@ class MMatrix:
 
         #populate epsilon (noise) array)
         for i in range(self.N):
-            self.uninf_epsilon_array = np.append(self.uninf_epsilon_array, np.random.uniform(0, self.sigma_e_squared))
+            self.uninf_epsilon_array = np.append(self.uninf_epsilon_array, np.random.normal(0, self.sigma_e_squared))
 
         #post-noise simualted phenotype
         self.simulate_uninf_phenotype_noised = np.add(self.simulate_uninf_phenotype, self.uninf_epsilon_array)
