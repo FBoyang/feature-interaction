@@ -38,8 +38,8 @@ class MMatrix:
     def mNormalize(self, matrix):
         #2.1. (1)-D matrix
         if (len(matrix)==1):
-            norm = np.linalg.norm(an_array)
-            normal_array= an_array/norm
+            norm = np.linalg.norm(matrix)
+            normal_array= matrix/norm
             return normal_array
         #2.2. (2+)-D matrix
         else:
