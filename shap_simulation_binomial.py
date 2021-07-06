@@ -19,7 +19,7 @@ class MMatrix:
         self.sigma_e_squared = 1-self.sigma_g_squared
         
         #1.1.3.Distribution of coeeficients(beta) and noise(epsilon)
-        self.beta = np.random.normal(0,self.sigma_g_squared,self.M)
+        self.beta = np.random.normal(0,self.sigma_g_squared/self.M,self.M)
         self.epsi = np.random.normal(0,self.sigma_g_squared,self.N)
         
         #1.1.4.Original model
