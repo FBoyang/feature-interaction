@@ -18,7 +18,7 @@ class MMatrix:
         self.inf_epsilon_array = np.array([])
         self.uninf_epsilon_array = np.array([])
 
-        self.sigma_g_squared = np.random.normal(0, 1, self.N)
+        self.sigma_g_squared = np.random.uniform(0, 0.5)
         self.sigma_e_squared = 1 - self.sigma_g_squared
 
     def generateMatrix(self):
