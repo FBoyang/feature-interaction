@@ -48,10 +48,10 @@ class MMatrix:
     #2.Generate a genotype matrix
     def generateMatrix(self):
         #2.1.Generate genotype matrix X
-        for i, row in enumerate(self.X):
+        for i, col in enumerate(self.X):
             np.random.seed(1)
             p = rd.uniform(0,1)
-            for j, col in enumerate(row):
+            for j, row in enumerate(col):
                 self.X[i][j] = np.random.binomial(2, p)
     
     #3.Simulate a phenotype matrix infinitesimally
