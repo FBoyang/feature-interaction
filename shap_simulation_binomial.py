@@ -11,16 +11,17 @@ class MMatrix:
     #1.Defining model variables and SHAP variables
     def __init__(self):
         #1.1.1.Size of matrices
-        self.N = 40#np.random.randint(1000, 5001)
-        self.M = 50#np.random.randint(10, 101)
+        np.random.seed(1)
+        self.N = np.random.randint(1000, 5001)
+        self.M = np.random.randint(10, 101)
         
         #1.1.2.Variance of coefficients(beta) and noise(epsilon)
-        self.sigma_g_squared = rd.uniform(0,0.5)
-        self.sigma_e_squared = 1-self.sigma_g_squared
+        self.sigma_e_squared = rd.uniform(0,0.5)
+        self.sigma_g_squared = 1-self.sigma_e_squared
         
         #1.1.3.Distribution of coeeficients(beta) and noise(epsilon)
         self.beta = np.random.normal(0,self.sigma_g_squared/self.M,self.M)
-        self.epsi = np.random.normal(0,self.sigma_g_squared,self.N)
+        self.epsi = np.random.normal(0,self.sigma_e_squared,self.N)
         
         #1.1.4.Original model
         self.X = np.empty((self.N, self.M)) # Gene matrix X (N*M)
@@ -39,7 +40,7 @@ class MMatrix:
         #2.1. (1)-D matrix
         if (len(matrix)==1):
             norm = np.linalg.norm(matrix)
-            normal_array= matrix/norm
+            normal_array = matrix/norm
             return normal_array
         #2.2. (2+)-D matrix
         else:
@@ -104,6 +105,20 @@ class MMatrix:
         print(df)
         #5.3.Store data frame into a .cvs file
         df.to_csv(fileName)
+        
+    #6.Export gene data to 2 files
+    def exportGeneDataToFile(self, data1, fileName1, data2, fileName2):
+        #6.1.Store gene data to file 1
+        df = pd.DataFrame(data1)
+        print("X\n",df)
+        #5.2.Store data frame into a .cvs file
+        df.to_csv(fileName1)
+        
+        #6.1.Store gene data to file 2
+        df = pd.DataFrame(data2)
+        print("y\n",df)
+        #5.2.Store data frame into a .cvs file
+        df.to_csv(fileName2)
 
 #B.Executing the defined class
 if __name__ == "__main__":
@@ -117,13 +132,15 @@ if __name__ == "__main__":
     myMatrix.simulatePhenotypeInf()
     
     #4.Fitting dataset (X,y) to linear model and observing result
-    myMatrix.generateModel(myMatrix.X, myMatrix.y, "infinitesimally")
+    myMatrix.generateModel(myMatrix.X, myMatrix.y, "_infinitesimally")
     
     #5.Store paired data of coef_ in both original and SHAP-ed model to file
     myMatrix.exportPairDataToFile(myMatrix.beta,'trueValue',
             myMatrix.sBeta,'shapValue','./trueShapPairSamples.csv')
     
-    """6.Store paired data of phenotype of oriniginal and SHAP-ed model to file
-    myMatrix.exportPairDataToFile(myMatrix.y,
-        'trueValue',myMatrix.sy,'shapValue','./trueShapPairSamples.csv')
-    """
+    #6.Store geno- and pheno- data into files
+    myMatrix.exportGeneDataToFile(myMatrix.X,'genotype.csv',
+                                  myMatrix.y,'phenotype.csv')
+    #6.Store paired data of phenotype of oriniginal and SHAP-ed model to file
+    #myMatrix.exportPairDataToFile(myMatrix.y,
+    #    'trueValue',myMatrix.sy,'shapValue','./trueShapPairSamples.csv')
