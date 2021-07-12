@@ -4,11 +4,12 @@ import shap
 import sklearn as sk
 import sympy as sp
 import matplotlib.pyplot as plt
-
+import torch
+import layers
 
 class MMatrix:
     def __init__(self, g):
-        np.random.seed(12345)
+        #np.random.seed(12345)
         self.N = 5000 #np.random.randint(1000, 5001)
         self.M = 100 #np.random.randint(10, 101)
 
@@ -22,6 +23,8 @@ class MMatrix:
         self.sigma_e_squared = 1 - self.sigma_g_squared
 
         self.g = str(np.around(g, decimals=2))
+
+        self.dl_model = torch.load("model.pth")
 
     def generateMatrix(self):
         self.genotype_matrix = np.empty((self.N, self.M))
@@ -66,7 +69,7 @@ class MMatrix:
     #     for i in range(self.N):
     #         self.uninf_epsilon_array = np.append(self.uninf_epsilon_array, np.random.normal(0, self.sigma_e_squared))
     #
-    #     #post-noise simualted phenotype
+    #     #post-noise simulated phenotype
     #     self.simulate_uninf_phenotype_noised = np.add(self.simulate_uninf_phenotype, self.uninf_epsilon_array)
 
     def generateModel(self, genotype, phenotype, modelType):
@@ -94,6 +97,10 @@ class MMatrix:
         explainer = shap.Explainer(model=model, masker=background)
         shap_values = explainer(X)
 
+        #Compute DeepSHAP Values
+        # background = X[np.random.choice(X.shape[0], 100, replace=False)]
+        # explainer = shap.DeepExplainer(self.dl_model, background)
+        # shap_values = explainer.shap_values(X[0])
 
         self.vals = np.abs(explainer.shap_values(X)).mean(0)
 
@@ -121,34 +128,47 @@ class MMatrix:
         # plt.close()
 
     def export(self):
-        np.savetxt("outputs/genotype_" + self.g + "g.csv", self.genotype_matrix, delimiter=",")
-        np.savetxt("outputs/phenotype_" + self.g + "g.csv", self.simulate_inf_phenotype_noised)
+        #code to export genotype, phenotype, and coefficient/shap value data
+        #np.savetxt("outputs/genotype_" + self.g + "g.csv", self.genotype_matrix, delimiter=",")
+        #np.savetxt("outputs/phenotype_" + self.g + "g.csv", self.simulate_inf_phenotype_noised)
+        #combined = np.transpose(np.vstack((self.inf_beta_array, self.coefficients, self.vals)))
+        #np.savetxt("outputs/coefficients_and_shap_" + self.g + "g.csv", combined, delimiter=",", header="True Coefficients,sklearn Coefficients,Mean Abs. Shap Values")
 
-        combined = np.transpose(np.vstack((self.inf_beta_array, self.coefficients, self.vals)))
-        np.savetxt("outputs/coefficients_and_shap_" + self.g + "g.csv", combined, delimiter=",", header="True Coefficients,sklearn Coefficients,Mean Abs. Shap Values")
 
+        #code to generate dataframe with top N features, sorted by descending
+        n_features = 20
+        combined_abs_top_n = np.transpose(np.vstack((np.abs(self.inf_beta_array), np.abs(self.coefficients), self.vals)))[0:n_features]
+        comparison_df = pd.DataFrame(data=combined_abs_top_n, columns=["True Coefficient Absolute Value", "sklearn Coefficient Absolute Value", "SHAP Mean Absolute Value"],
+                                     index=["G"+str(k) for k in range(1, combined_abs_top_n.shape[0]+1)])
+        comparison_df = comparison_df.sort_values(by=['True Coefficient Absolute Value'], ascending=False)
 
-        #code to generate comparison bar plots
-        combined_abs = np.transpose(np.vstack((np.abs(self.inf_beta_array), np.abs(self.coefficients), self.vals)))
-        headers = ["True Coefficient Absolute Value", "sklearn Coefficient Absolute Value", "SHAP Mean Absolute Value"]
+        #code to calculate pearson and kendall coefficients between coefficients and shap values
+        pearson_matrix = comparison_df.corr(method='pearson')
+        pearson_corr = pearson_matrix["True Coefficient Absolute Value"]["SHAP Mean Absolute Value"]
 
-        x = np.arange(combined_abs.shape[0])
-        dx = (np.arange(combined_abs.shape[1]) - combined_abs.shape[1] / 2.) / (combined_abs.shape[1] + 2.)
-        d = 1. / (combined_abs.shape[1] + 2.)
+        kendall_matrix = comparison_df.corr(method='kendall')
+        kendall_corr = kendall_matrix["True Coefficient Absolute Value"]["SHAP Mean Absolute Value"]
 
-        fig, ax = plt.subplots()
-        for i in range(combined_abs.shape[1]):
-            ax.bar(x + dx[i], combined_abs[:, i], width=d, label=headers[i])
+        correlation.append([pearson_corr, kendall_corr])
 
-        plt.legend(framealpha=1)
+        #code to generate and save bar plot
+        ax = comparison_df.plot.bar(rot=0)
         plt.savefig("plots/comparison_" + self.g + "g.png", dpi=1000)
+        #plt.show()
         plt.close()
 
 
 if __name__ == "__main__":
-    for i in range(0, 6):
-        myMatrix = MMatrix(i/10)
+    g = 1.0
+    iterations = 100
+
+    correlation = []
+
+    for i in range (0, iterations):
+        myMatrix = MMatrix(g)
         myMatrix.generateMatrix()
         myMatrix.simulatePhenotypeInfinitesimally()
         myMatrix.generateModel(myMatrix.genotype_matrix, myMatrix.simulate_inf_phenotype, "infinitesimally")
         myMatrix.export()
+
+    np.savetxt("outputs/correlation_" + str(g) + "g_.csv", correlation, delimiter=",", header="Pearson,Kendall")
