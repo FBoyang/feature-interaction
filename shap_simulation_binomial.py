@@ -2,14 +2,17 @@ import numpy as np
 import pandas as pd
 import shap
 import sklearn as sk
-import sympy as sp
 import matplotlib.pyplot as plt
+import scipy.stats as ss
+import csv
+import os.path as pt
 
+#A/Define matrix of genotype-phenotype
 class MMatrix:
     #1.Defining model variables and SHAP variables
     def __init__(self, param_g,param_N,param_M):
         #1.1.1.Size of matrices
-        np.random.seed(10000)
+        self.rndState=np.random.RandomState(10000)
         self.N = param_N #np.random.randint(1000, 5001)
         self.M = param_M #np.random.randint(10, 101)
         
@@ -18,8 +21,8 @@ class MMatrix:
         self.sigma_e_squared = 1 - self.sigma_g_squared
         
         #1.1.3.Distribution of coeeficients(beta) and noise(epsilon)
-        self.beta = np.random.normal(0,self.sigma_g_squared/self.M,self.M)
-        self.epsi = np.random.normal(0,self.sigma_e_squared,self.N)
+        self.beta = self.rndState.normal(0,self.sigma_g_squared/self.M,self.M)
+        self.epsi = self.rndState.normal(0,self.sigma_e_squared,self.N)
 
         #1.1.4.Original model
         self.X = np.empty((self.N, self.M)) # Gene matrix X (N*M)
@@ -41,7 +44,7 @@ class MMatrix:
         for i in range(self.M):
             p = np.random.uniform(0, 1)
             for j in range(self.N):
-                self.X[j][i] = np.random.binomial(2, p)
+                self.X[j][i] = self.rndState.binomial(2, p)
 
         #2.2.Normalize the genotype matrix column-wisely
         self.X = sk.preprocessing.scale(self.X)
@@ -111,18 +114,121 @@ class MMatrix:
                     str(self.sigma_g_squared) + "g.png", dpi=1000)
         plt.close()
     
+    #6.Correlation
+    def mCorrelation(self,param_x1,param_x2):       
+       #6.1.Person correlation
+       self.pear_corr,self.pear_pval = ss.pearsonr(param_x1,param_x2)
+       self.pear_corr = round(self.pear_corr,2)
+       self.pear_pval = round(self.pear_pval,2)
+       #if(self.pear_pval <=0.05): #Reject NULL: param_x1 == param_x2
+       #    print("Pearson: corr="+str(self.pear_corr)+
+       #          ", pval="+str(self.pear_pval))
+       
+       #6.2.Tau correlation
+       self.tau_corr,self.tau_pval = ss.kendalltau(param_x1,param_x2)
+       self.tau_corr = round(self.tau_corr,2)
+       self.tau_pval = round(self.tau_pval,2)
+       #if(self.tau_pval <=0.05): #Reject NULL: param_x1 == param_x2
+       #    print("Tau: corr="+str(self.tau_corr)+
+       #          ", pval="+str(self.tau_pval))
+
+#B/Define stats operations
+class MStat:
+    #1.Define
+    def __init__(self):
+        self.pearson_corrs = ([])
+        self.tau_corrs = ([])
+        
+        self.pearson_corr_mean = 0.0
+        self.pearson_corr_sd = 0.0
+        
+        self.tau_corr_mean = 0.0
+        self.tau_corr_sd = 0.0
+        
+    #3.Add data to list
+    def addCorrelations(self,pearson_corr,tau_corr):
+        self.pearson_corrs = np.append(self.pearson_corrs, pearson_corr)
+        self.tau_corrs = np.append(self.tau_corrs, tau_corr)
+    
+    #2.Compare correlation values and get the standard deviation of this corr_ distribution
+    def mCompareCorrSD(self):
+        #7.1. Get mean of pearson correlations and see the standard deviation
+        self.pearson_corr_mean = np.around(np.mean(self.pearson_corrs),2)
+        self.pearson_corr_sd = np.around(np.std(self.pearson_corrs),2)
+        #print("Pearson correlation: mean="+str(self.pearson_corr_mean)+
+        #      ", standard deviation="+str(self.pearson_corr_sd))
+        
+        #7.1. Get mean of tau correlations and see the standard deviation
+        self.tau_corr_mean = np.around(np.mean(self.tau_corrs),2)
+        self.tau_corr_sd = np.around(np.std(self.tau_corrs),2)
+        #print("Tau correlation: mean="+str(self.tau_corr_mean)+
+        #      ", standard deviation="+str(self.tau_corr_sd))
+            
+    #4.Export data to file
+    def exportFile(self, data, title):
+        #5.1.1.Store data to daframe
+        df = pd.DataFrame(data)
+        #5.1.2.Store data frame into a .cvs file
+        df.to_csv("output/"+title+".csv")
+    
+    #5.Export correlations data to files
+    def exportCorrelations(self,title):
+        #5.1.PEARSON: mean, std, data
+        write_data = pd.DataFrame(np.transpose(np.vstack((self.pearson_corrs,
+            self.tau_corrs))))
+        
+        pearson_data = pd.DataFrame(np.transpose([self.pearson_corr_mean,
+                                                  self.pearson_corr_sd]))
+        write_data = pd.concat([write_data.reset_index(drop=True),
+                                pearson_data.reset_index(drop=True)],axis=1)
+        
+        #5.2.TAU:mean, std, data
+        tau_data = pd.DataFrame(np.transpose([self.tau_corr_mean,
+                                              self.tau_corr_sd]))
+        write_data = pd.concat([write_data.reset_index(drop=True),
+                                tau_data.reset_index(drop=True)],axis=1)
+        
+        #5.3.Naming column's headers
+        write_data.columns = ["Pearson","Kendall Tau","Pearson Mean,Std",
+                              "Kendall Tau Mean,Std"]
+        
+        self.exportFile(write_data, title)
+        
+#C/Loading area
 if __name__ == "__main__":
-    for i in range(0,11):
-        #Define setting
-        myMatrix = MMatrix(i/10,100,70)
-        myMatrix.generateMatrix()
-        myMatrix.simulatePhenotypeInf()
-        myMatrix.generateModel(myMatrix.X, myMatrix.y, "infinitesimally")
-        #EWxport matrices
-        myMatrix.exportFile(myMatrix.X, "output/"+"["+str(myMatrix.N)+"x"+
-            str(myMatrix.M)+"]"+"genotype at g="+str(myMatrix.sigma_g_squared))
-        myMatrix.exportFile(myMatrix.X, "output/"+"phenotype at g="+"["+
-            str(myMatrix.N)+"x"+str(myMatrix.M)+"]"+str(myMatrix.sigma_g_squared))
-        #Export charts
-        myMatrix.exportComparisonChart(myMatrix.beta,"trueCoef",
-            myMatrix.sBeta,"predictedCoef",myMatrix.sABSValues,"meanedSHAPValues")
+    #Go through loops
+    for i in range(1,2):#size NxM
+        for j in range(1,11):#run 2 times 2 matrix of different g
+            print("At g=",str(j/10))
+            #Define the statatics object
+            myStat = MStat()
+            
+            #And compute correlation values
+            for k in range(0,100):
+                #Define setting
+                myMatrix = MMatrix(j/10,int((10**i)),int((10**i)/2))
+                myMatrix.generateMatrix()
+                myMatrix.simulatePhenotypeInf()
+                myMatrix.generateModel(myMatrix.X, myMatrix.y, "infinitesimally")
+                    
+                #Export matrices
+                """myMatrix.exportFile(myMatrix.X, "output/"+"["+str(myMatrix.N)+"x"+
+                    str(myMatrix.M)+"]"+"genotype at g="+str(myMatrix.sigma_g_squared))
+                myMatrix.exportFile(myMatrix.X, "output/"+"phenotype at g="+"["+
+                    str(myMatrix.N)+"x"+str(myMatrix.M)+"]"+str(myMatrix.sigma_g_squared))
+                    
+                #Export charts
+                myMatrix.exportComparisonChart(myMatrix.beta,"trueCoef",
+                    myMatrix.sBeta,"predictedCoef",myMatrix.sABSValues,"meanedSHAPValues")
+                """    
+                #Correlation computation: Pearson, Tau
+                myMatrix.mCorrelation(myMatrix.beta, myMatrix.sABSValues)
+                    
+                #Adding these correlations into computational places
+                myStat.addCorrelations(myMatrix.pear_corr, myMatrix.tau_corr)
+                        
+                #Before output those values to screen
+            myStat.mCompareCorrSD()
+            myStat.exportCorrelations("correlations@["+str(myMatrix.N)+"x"+
+                str(myMatrix.M)+"]"+"@g="+str(np.around(myMatrix.sigma_g_squared,2)))
+            
