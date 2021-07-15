@@ -5,7 +5,7 @@ import sklearn as sk
 import matplotlib.pyplot as plt
 import scipy.stats as ss
 import csv
-import os.path as pt
+import os
 
 #A/Define matrix of genotype-phenotype
 class MMatrix:
@@ -71,12 +71,25 @@ class MMatrix:
         
         #4.2.3.Compute SHAP values
         background = shap.maskers.Independent(X, self.maxSampleSize)
-        explainer = shap.Explainer(model=model.predict, masker=background)
+        explainer = shap.Explainer(model=model,masker=background,algorithm='auto')
+        #explainer = shap.Explainer(model=model.predict, masker=background)
         shap_values = explainer(X)
+        
+        #4.2.4.Scale-down absoluted SHAP values with mean at 0
+        self.sABSValues = np.abs(explainer.shap_values(X)).mean(0)
+        
+        
+    #5.0.1.Sorting matrix by ith column
+    def sortingMatrix(self,param_matrix,param_column_index):
+        # Find the ordering of the first column (in increasing order)
+        ind = np.argsort(param_matrix[:,param_column_index-1])
 
-        #4.2.4.Neutralized absoluted SHAP values with mean at 0
-        self.sABSValues = np.abs(shap_values.values).mean(0)
-    
+        # Switch the ordering (so it's decreasing order)
+        rind = ind[::-1]
+
+        # Return the matrix with rows in the specified order
+        return param_matrix[rind]
+        
     #5.1.Export gene to file
     def exportFile(self, data, title):
         #5.1.1.Store data to daframe
@@ -86,7 +99,7 @@ class MMatrix:
     
     #5.2.Export {trueCoef,sklearnCoef,shapValues} comparison to charts
     #Credit: Nick
-    def exportComparisonChart(self,data1,title1,data2,title2,data3,title3):
+    def exportComparisonChart(self,data1,title1,data2,title2,data3,title3,mTopFeature):
         #5.2.1.Collect data in orders
         mainframe = np.transpose(np.vstack((data1,data2,data3)))
         self.exportFile(mainframe,"output/"+"["+str(self.N)+"x"+str(self.M)+
@@ -94,6 +107,8 @@ class MMatrix:
         
         #5.2.2.Prepare data for charting
         mainframe = np.transpose(np.vstack((np.abs(data1),np.abs(data2),np.abs(data3))))
+        mainframe = mainframe[0:mTopFeature] #Get mTopFeature to charting task
+        mainframe = self.sortingMatrix(mainframe, 1) #Sorting them by first column
         header = [title1,title2,title3]
         
         #5.2.3.Set up scale inside the chart
@@ -111,7 +126,7 @@ class MMatrix:
         #5.2.5.Store chart
         plt.legend(framealpha=1)
         plt.savefig("comparison/"+"["+str(self.N)+"x"+str(self.M)+"]"+
-                    str(self.sigma_g_squared) + "g.png", dpi=1000)
+            str(self.sigma_g_squared)+"g_top"+str(mTopFeature)+"features.png", dpi=1000)
         plt.close()
     
     #6.Correlation
@@ -120,35 +135,38 @@ class MMatrix:
        self.pear_corr,self.pear_pval = ss.pearsonr(param_x1,param_x2)
        self.pear_corr = round(self.pear_corr,2)
        self.pear_pval = round(self.pear_pval,2)
-       #if(self.pear_pval <=0.05): #Reject NULL: param_x1 == param_x2
-       #    print("Pearson: corr="+str(self.pear_corr)+
-       #          ", pval="+str(self.pear_pval))
        
        #6.2.Tau correlation
        self.tau_corr,self.tau_pval = ss.kendalltau(param_x1,param_x2)
        self.tau_corr = round(self.tau_corr,2)
        self.tau_pval = round(self.tau_pval,2)
-       #if(self.tau_pval <=0.05): #Reject NULL: param_x1 == param_x2
-       #    print("Tau: corr="+str(self.tau_corr)+
-       #          ", pval="+str(self.tau_pval))
-
+       
+       #6.3.Spearman correlation
+       self.spearman_corr,self.spearman_pval = ss.spearmanr(param_x1,param_x2)
+       self.spearman_corr = round(self.spearman_corr,2)
+       self.spearman_pval = round(self.spearman_pval,2)
+       
 #B/Define stats operations
 class MStat:
     #1.Define
     def __init__(self):
         self.pearson_corrs = ([])
         self.tau_corrs = ([])
+        self.spearman_corrs = ([])
         
         self.pearson_corr_mean = 0.0
-        self.pearson_corr_sd = 0.0
-        
         self.tau_corr_mean = 0.0
+        self.spearman_corr_mean = 0.0
+        
+        self.pearson_corr_sd = 0.0
         self.tau_corr_sd = 0.0
+        self.spearman_corr_sd = 0.0 
         
     #3.Add data to list
-    def addCorrelations(self,pearson_corr,tau_corr):
+    def addCorrelations(self,pearson_corr,tau_corr,spearman_corr):
         self.pearson_corrs = np.append(self.pearson_corrs, pearson_corr)
         self.tau_corrs = np.append(self.tau_corrs, tau_corr)
+        self.spearman_corrs = np.append(self.spearman_corrs, spearman_corr)
     
     #2.Compare correlation values and get the standard deviation of this corr_ distribution
     def mCompareCorrSD(self):
@@ -158,14 +176,24 @@ class MStat:
         #print("Pearson correlation: mean="+str(self.pearson_corr_mean)+
         #      ", standard deviation="+str(self.pearson_corr_sd))
         
-        #7.1. Get mean of tau correlations and see the standard deviation
+        #7.2. Get mean of tau correlations and see the standard deviation
         self.tau_corr_mean = np.around(np.mean(self.tau_corrs),2)
         self.tau_corr_sd = np.around(np.std(self.tau_corrs),2)
         #print("Tau correlation: mean="+str(self.tau_corr_mean)+
         #      ", standard deviation="+str(self.tau_corr_sd))
+        
+        #7.3. Get mean of spearman correlations and see the standard deviation
+        self.spearman_corr_mean = np.around(np.mean(self.spearman_corrs),2)
+        self.spearman_corr_sd = np.around(np.std(self.spearman_corrs),2)
+        #print("Spearman correlation: mean="+str(self.spearman_corr_mean)+
+        #      ", standard deviation="+str(self.spearman_corr_sd))
+        
+        #7.4. Limit for now, pval test
             
     #4.Export data to file
     def exportFile(self, data, title):
+        if not os.path.exists('output'):
+            os.makedirs('output')
         #5.1.1.Store data to daframe
         df = pd.DataFrame(data)
         #5.1.2.Store data frame into a .cvs file
@@ -175,7 +203,7 @@ class MStat:
     def exportCorrelations(self,title):
         #5.1.PEARSON: mean, std, data
         write_data = pd.DataFrame(np.transpose(np.vstack((self.pearson_corrs,
-            self.tau_corrs))))
+            self.tau_corrs, self.spearman_corrs))))
         
         pearson_data = pd.DataFrame(np.transpose([self.pearson_corr_mean,
                                                   self.pearson_corr_sd]))
@@ -188,47 +216,56 @@ class MStat:
         write_data = pd.concat([write_data.reset_index(drop=True),
                                 tau_data.reset_index(drop=True)],axis=1)
         
+        #5.3.SPEARMAN:mean, std, data
+        spearman_data = pd.DataFrame(np.transpose([self.spearman_corr_mean,
+                                              self.spearman_corr_sd]))
+        write_data = pd.concat([write_data.reset_index(drop=True),
+                                spearman_data.reset_index(drop=True)],axis=1)
+        
         #5.3.Naming column's headers
-        write_data.columns = ["Pearson","Kendall Tau","Pearson Mean,Std",
-                              "Kendall Tau Mean,Std"]
+        write_data.columns = ["Pearson","Kendall Tau","Spearman",
+            "Pearson Mean,Std","Kendall Tau Mean,Std","Spearman Mean,Std"]
         
         self.exportFile(write_data, title)
         
 #C/Loading area
 if __name__ == "__main__":
+    
     #Go through loops
-    for i in range(1,2):#size NxM
+    for i in range(2,3):#size NxM
         for j in range(1,11):#run 2 times 2 matrix of different g
-            print("At g=",str(j/10))
-            #Define the statatics object
+            print("At g=",str(j/10))#Mark the current running trial
+            #1.Define the statatics object
             myStat = MStat()
             
-            #And compute correlation values
-            for k in range(0,100):
-                #Define setting
-                myMatrix = MMatrix(j/10,int((10**i)),int((10**i)/2))
+            #2.And compute correlation values
+            for k in range(0,20):
+                #2.1.Define setting
+                myMatrix = MMatrix(j/10,int((10**i)),int((10**i)/3*2))
                 myMatrix.generateMatrix()
                 myMatrix.simulatePhenotypeInf()
                 myMatrix.generateModel(myMatrix.X, myMatrix.y, "infinitesimally")
                     
-                #Export matrices
-                """myMatrix.exportFile(myMatrix.X, "output/"+"["+str(myMatrix.N)+"x"+
+                #2.2.Export matrices
+                myMatrix.exportFile(myMatrix.X, "output/"+"["+str(myMatrix.N)+"x"+
                     str(myMatrix.M)+"]"+"genotype at g="+str(myMatrix.sigma_g_squared))
                 myMatrix.exportFile(myMatrix.X, "output/"+"phenotype at g="+"["+
                     str(myMatrix.N)+"x"+str(myMatrix.M)+"]"+str(myMatrix.sigma_g_squared))
                     
-                #Export charts
+                #2.3.Export charts
                 myMatrix.exportComparisonChart(myMatrix.beta,"trueCoef",
-                    myMatrix.sBeta,"predictedCoef",myMatrix.sABSValues,"meanedSHAPValues")
-                """    
-                #Correlation computation: Pearson, Tau
-                myMatrix.mCorrelation(myMatrix.beta, myMatrix.sABSValues)
+                    myMatrix.sBeta,"predictedCoef",myMatrix.sABSValues,
+                    "meanedSHAPValues",mTopFeature = int(0.1*10**i/3*2))
+                #(*)Notice: at wide range: mTopFeature = int(10**i)
+                
+                #2.4.Correlation computation: Pearson, Tau, Spearman
+                myMatrix.mCorrelation(np.abs(myMatrix.beta), myMatrix.sABSValues)
                     
-                #Adding these correlations into computational places
-                myStat.addCorrelations(myMatrix.pear_corr, myMatrix.tau_corr)
-                        
-                #Before output those values to screen
+                #2.5Adding these correlations into computational places
+                myStat.addCorrelations(myMatrix.pear_corr, myMatrix.tau_corr,
+                                       myMatrix.spearman_corr)
+            
             myStat.mCompareCorrSD()
             myStat.exportCorrelations("correlations@["+str(myMatrix.N)+"x"+
                 str(myMatrix.M)+"]"+"@g="+str(np.around(myMatrix.sigma_g_squared,2)))
-            
+    
