@@ -159,16 +159,17 @@ class MMatrix:
 
 
 if __name__ == "__main__":
-    g = 1.0
+    g_values = [0.6, 0.7, 0.8, 0.9]
     iterations = 100
 
-    correlation = []
+    for g in g_values:
+        correlation = []
 
-    for i in range (0, iterations):
-        myMatrix = MMatrix(g)
-        myMatrix.generateMatrix()
-        myMatrix.simulatePhenotypeInfinitesimally()
-        myMatrix.generateModel(myMatrix.genotype_matrix, myMatrix.simulate_inf_phenotype, "infinitesimally")
-        myMatrix.export()
+        for i in range (0, iterations):
+            myMatrix = MMatrix(g)
+            myMatrix.generateMatrix()
+            myMatrix.simulatePhenotypeInfinitesimally()
+            myMatrix.generateModel(myMatrix.genotype_matrix, myMatrix.simulate_inf_phenotype_noised, "infinitesimally")
+            myMatrix.export()
 
-    np.savetxt("outputs/correlation_" + str(g) + "g_.csv", correlation, delimiter=",", header="Pearson,Kendall")
+        np.savetxt("outputs/correlation_" + str(g) + "g_.csv", correlation, delimiter=",", header="Pearson,Kendall")
