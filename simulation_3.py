@@ -66,7 +66,7 @@ if __name__ == "__main__":
     M=20 #Total SNPs of each individual
     K=200 #Total set of {N individuals x M SNPs} //{NxM}
     sigma_g=0.02 #Variance of noise to simulate phenotype
-    permutationTimes=50 #Total permutation times per original set {NxM}
+    permutationTimes=100 #Total permutation times per original set {NxM}
     
     #Generate K X,y and export it to K output files {X,y}
     totalRunningTime = []
