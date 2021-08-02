@@ -4,8 +4,8 @@ import shap
 from sklearn.model_selection import train_test_split
 
 for i in range (1, 201):
-    X = np.genfromtxt('outputs/genotype_0.1g.csv', delimiter=',')
-    y = np.genfromtxt('outputs/phenotype_0.1g_' + str(i) + '.csv', delimiter=',')
+    X = np.genfromtxt('outputs/0.1g/genotype_0.1g.csv', delimiter=',')
+    y = np.genfromtxt('outputs/0.1g/phenotype_0.1g_' + str(i) + '.csv', delimiter=',')
 
     Xd = xgboost.DMatrix(data=X,label=y)
 
@@ -18,7 +18,7 @@ for i in range (1, 201):
     shap_values = explainer.shap_values(Xd)
 
     shap_interaction_values = explainer.shap_interaction_values(Xd)
-    np.savetxt("xgboost_outputs/InteractionScore_" + str(i) + ".csv", shap_interaction_values[0].round(3), delimiter=",", fmt='%f')
+    np.savetxt("xgboost_outputs/InteractionScore/XGBoost_" + str(i) + ".csv", shap_interaction_values[0], delimiter=",", fmt='%f')
 
 
 

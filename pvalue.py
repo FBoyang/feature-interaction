@@ -10,11 +10,11 @@ percentiles = np.array([])
 
 for simulation in range(1, 201):
     null_distribution = np.array([])
-    for file in glob.glob("/Users/nicholasliu/Documents/GitHub/feature-interaction/data/0.3g/PermutationDistribution/"+str(simulation)+"/*.csv"):
+    for file in glob.glob("/Users/nicholasliu/Documents/GitHub/feature-interaction/xgboost_outputs/PermutationDistribution/"+str(simulation)+"/*.csv"):
         null_distribution = np.append(null_distribution, np.genfromtxt(file, delimiter=",")[0][1])
 
     threshold = np.percentile(null_distribution, 95)
-    observed_interaction = np.genfromtxt("/Users/nicholasliu/Documents/GitHub/feature-interaction/data/0.3g/InteractionScore/NN_"+str(simulation)+".csv", delimiter=",")[0][1]
+    observed_interaction = np.genfromtxt("/Users/nicholasliu/Documents/GitHub/feature-interaction/xgboost_outputs/InteractionScore/XGBoost_"+str(simulation)+".csv", delimiter=",")[0][1]
     if observed_interaction > threshold:
         false_predictions += 1
 

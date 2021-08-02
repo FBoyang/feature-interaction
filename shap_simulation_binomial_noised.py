@@ -11,7 +11,7 @@ class MMatrix:
     def __init__(self, g):
         #np.random.seed(12345)
         self.N = 1000 #np.random.randint(1000, 5001)
-        self.M = 2 #np.random.randint(10, 101)
+        self.M = 20 #np.random.randint(10, 101)
 
         self.inf_beta_array = np.array([])
         self.uninf_beta_array = np.array([])
@@ -38,7 +38,7 @@ class MMatrix:
         self.genotype_matrix = sk.preprocessing.scale(self.genotype_matrix)
 
     def simulatePhenotypeInfinitesimally(self):
-        self.genotype_matrix = np.genfromtxt('outputs/genotype_0.3g.csv', delimiter=',')
+        self.genotype_matrix = np.genfromtxt('outputs/genotype_0.1g.csv', delimiter=',')
 
         for i in range(self.M):
             self.inf_beta_array = np.append(self.inf_beta_array, np.random.normal(0, self.sigma_g_squared/self.M))
@@ -162,8 +162,8 @@ class MMatrix:
 
 if __name__ == "__main__":
     for i in range (1, 201):
-        myMatrix = MMatrix(0.3)
-        myMatrix.generateMatrix()
+        myMatrix = MMatrix(0.1)
+        #myMatrix.generateMatrix()
         myMatrix.simulatePhenotypeInfinitesimally()
         myMatrix.generateModel(myMatrix.genotype_matrix, myMatrix.simulate_inf_phenotype_noised, "infinitesimally")
         myMatrix.export(i)
