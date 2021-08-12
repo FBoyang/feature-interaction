@@ -81,7 +81,7 @@ class MMatrix:
         self.beta = np.random.normal(0,self.sig_g/self.geneNum,self.geneNum)
         
         #3.2.2.Distribution of different gene-gene effect
-        self.gamma[i in range(self.effSize)]=self.sig_gg/self.effSize
+        self.gamma = np.random.normal(0,self.sig_gg/self.effSize,self.effSize)
         
         #3.2.4.Distribution of noise effect
         self.epsi = np.random.normal(0,self.sig_e,self.N)
