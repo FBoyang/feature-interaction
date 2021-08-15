@@ -20,9 +20,9 @@ class MMatrix:
         
         #1.1.2. Setting of distribution variance/coefficient
         self.sig_g = pSigG                  # main-effect variance
-        self.snr = pSN                      # noise ratio
-        self.sig_e = (1-pSigG)*self.snr     # --> noise-effect variance
-        self.sig_gg = (1-pSigG)*(1-self.snr)# --> gene-gene-effect variance
+        self.snr = pSN                      # signal-to-noise ratio
+        self.sig_e = 1/(1+self.snr)         # => noise-effect variance
+        self.sig_gg=1-self.sig_e-self.sig_g # => gene-gene-effect variance
         
         #1.1.3.Distribution: 
         #   effect coefficients{(gene:alpha),(main:beta),(gene-gene:gamma)}
